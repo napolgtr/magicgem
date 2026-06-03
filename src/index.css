@@ -1,0 +1,348 @@
+@import url('https://fonts.googleapis.com/css2?family=Papyrus&display=swap');
+
+:root {
+  --primary-font: 'Papyrus', fantasy;
+  --bg-sky: #87CEEB;
+  --bg-grass: #4caf50;
+  
+  --stone-light: #d4c4a8;
+  --stone-dark: #a9997b;
+  --stone-shadow: #887858;
+  
+  --tile-light: #a3a6a3;
+  --tile-dark: #828582;
+  --tile-border: #d4af37; /* gold border around board */
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--primary-font);
+  background: linear-gradient(to bottom, var(--bg-sky) 50%, var(--bg-grass) 100%);
+  background-attachment: fixed;
+  overflow: hidden;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+#root {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Portrait lock overlay */
+.landscape-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.9);
+  color: white;
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  font-size: 24px;
+}
+
+@media screen and (orientation: landscape) and (max-height: 600px) {
+  .landscape-overlay {
+    display: flex;
+  }
+}
+
+/* Game Container */
+.game-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 500px;
+  height: 100%;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  /* Score sticks to top, gameplay area fills rest */
+  justify-content: flex-start;
+}
+
+/* Header UI - Score at top */
+.header-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+  margin-bottom: 0;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.stone-panel {
+  background-color: var(--stone-light);
+  border: 4px solid var(--stone-dark);
+  border-radius: 8px;
+  box-shadow: inset 2px 2px 5px rgba(255,255,255,0.5), inset -2px -2px 5px var(--stone-shadow), 3px 3px 10px rgba(0,0,0,0.5);
+  padding: 10px 20px;
+  color: #5c4033;
+  font-size: 24px;
+  font-weight: bold;
+  text-shadow: 1px 1px 0px rgba(255,255,255,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.magic-center {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #e0c3fc, #8ec5fc);
+  border: 6px solid #8b0000;
+  box-shadow: 0 0 15px rgba(139, 0, 0, 0.8), inset 0 0 20px rgba(255,255,255,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.magic-center-special {
+  background: radial-gradient(circle at 30% 30%, #ffdf00, #ff8c00);
+  border-color: #ffcc00;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 1), inset 0 0 20px rgba(255,255,255,0.8);
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); box-shadow: 0 0 15px rgba(255, 215, 0, 0.8); }
+  100% { transform: scale(1.1); box-shadow: 0 0 30px rgba(255, 215, 0, 1); }
+}
+
+/* Gameplay area - fills remaining space, anchors grid+controls to bottom */
+.gameplay-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  min-height: 0;
+  padding-bottom: 8px;
+}
+
+/* Grid */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, 1fr);
+  /* Size = min(full width, available height minus controls) */
+  width: min(100%, calc(100vh - 180px));
+  aspect-ratio: 1 / 1;
+  background-color: var(--tile-border);
+  padding: 4px;
+  border-radius: 4px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+  gap: 1px;
+}
+
+.grid-cell {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-size: cover;
+}
+
+.grid-cell.light {
+  background-image: url('/tile-light.png');
+  background-size: 100% 100%;
+  background-color: var(--tile-light); /* fallback until image loads */
+}
+
+.grid-cell.dark {
+  background-image: url('/tile-dark.png');
+  background-size: 100% 100%;
+  background-color: var(--tile-dark); /* fallback until image loads */
+}
+
+/* Embossed Hieroglyph - hidden when image tiles are loaded */
+.grid-cell::before {
+  content: '';
+  position: absolute;
+  width: 60%;
+  height: 60%;
+  /* These borders only show if the tile image fails to load */
+  border: 1px solid rgba(0,0,0,0.0);
+  border-radius: 4px;
+}
+
+/* Gems / Balls */
+.gem {
+  width: 80%;
+  height: 80%;
+  border-radius: 50%;
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.6), inset -5px -5px 15px rgba(0,0,0,0.5), inset 5px 5px 15px rgba(255,255,255,0.8);
+  z-index: 10;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Top-right shine highlight (bright star reflection) */
+.gem::before {
+  content: '';
+  position: absolute;
+  top: 6%;
+  right: 10%;
+  width: 50%;
+  height: 45%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 60% 40%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.5) 25%, transparent 70%);
+  transform: rotate(-30deg);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Bottom crescent sweep glow */
+.gem::after {
+  content: '';
+  position: absolute;
+  bottom: 5%;
+  left: 10%;
+  width: 70%;
+  height: 40%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 80%, rgba(255,255,255,0.45) 0%, transparent 70%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.gem.selected {
+  transform: scale(1.2);
+  box-shadow: 0 0 15px rgba(255,255,255,0.8), inset -5px -5px 15px rgba(0,0,0,0.5), inset 5px 5px 15px rgba(255,255,255,0.8);
+  animation: bounce 0.5s infinite alternate;
+}
+
+@keyframes bounce {
+  0% { transform: translateY(0) scale(1.1); }
+  100% { transform: translateY(-5px) scale(1.1); }
+}
+
+/* Gem Colors - High contrast, vivid like Magic Gem reference */
+/* Red: deep crimson core, hot red highlight */
+.gem.red {
+  background: radial-gradient(circle at 65% 35%, #ff4444 0%, #dd0000 40%, #800000 100%);
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.7), 0 0 8px rgba(220,0,0,0.5), inset -4px -4px 12px rgba(80,0,0,0.7);
+}
+
+/* Blue: vivid royal blue, icy highlight */
+.gem.blue {
+  background: radial-gradient(circle at 65% 35%, #55aaff 0%, #0055dd 40%, #002288 100%);
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.7), 0 0 8px rgba(0,80,220,0.5), inset -4px -4px 12px rgba(0,20,80,0.7);
+}
+
+/* Green: vivid emerald, lime highlight */
+.gem.green {
+  background: radial-gradient(circle at 65% 35%, #44ee88 0%, #00bb44 40%, #006622 100%);
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.7), 0 0 8px rgba(0,180,60,0.5), inset -4px -4px 12px rgba(0,60,20,0.7);
+}
+
+/* Yellow: vivid gold, warm light highlight */
+.gem.yellow {
+  background: radial-gradient(circle at 65% 35%, #ffee44 0%, #ffaa00 40%, #cc6600 100%);
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.7), 0 0 8px rgba(255,160,0,0.5), inset -4px -4px 12px rgba(100,40,0,0.7);
+}
+
+/* Purple: deep violet, neon violet highlight */
+.gem.purple {
+  background: radial-gradient(circle at 65% 35%, #cc88ff 0%, #8800dd 40%, #440088 100%);
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.7), 0 0 8px rgba(140,0,220,0.5), inset -4px -4px 12px rgba(50,0,80,0.7);
+}
+
+/* Cyan: vivid teal, ice blue highlight */
+.gem.cyan {
+  background: radial-gradient(circle at 65% 35%, #44ffee 0%, #00bbcc 40%, #006677 100%);
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.7), 0 0 8px rgba(0,180,200,0.5), inset -4px -4px 12px rgba(0,50,70,0.7);
+}
+
+/* Pink/Magenta: hot magenta, bright pink highlight */
+.gem.pink {
+  background: radial-gradient(circle at 65% 35%, #ff88dd 0%, #ee0088 40%, #880044 100%);
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.7), 0 0 8px rgba(230,0,140,0.5), inset -4px -4px 12px rgba(80,0,40,0.7);
+}
+
+/* Special Gem Graphic when Score > 50 */
+.gem.special-mode {
+  border: 2px solid white;
+  box-shadow: 0 0 20px var(--glow-color), inset -2px -2px 10px rgba(0,0,0,0.5), inset 2px 2px 10px rgba(255,255,255,1);
+}
+.gem.red.special-mode { --glow-color: #ff6b6b; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><polygon points="5,0 10,5 5,10 0,5" fill="rgba(255,255,255,0.5)"/></svg>'), radial-gradient(circle at 50% 50%, #ff6b6b, #c0392b); }
+.gem.blue.special-mode { --glow-color: #74b9ff; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><polygon points="5,0 10,5 5,10 0,5" fill="rgba(255,255,255,0.5)"/></svg>'), radial-gradient(circle at 50% 50%, #74b9ff, #0984e3); }
+.gem.green.special-mode { --glow-color: #55efc4; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><polygon points="5,0 10,5 5,10 0,5" fill="rgba(255,255,255,0.5)"/></svg>'), radial-gradient(circle at 50% 50%, #55efc4, #00b894); }
+.gem.yellow.special-mode { --glow-color: #ffeaa7; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><polygon points="5,0 10,5 5,10 0,5" fill="rgba(255,255,255,0.5)"/></svg>'), radial-gradient(circle at 50% 50%, #ffeaa7, #fdcb6e); }
+.gem.purple.special-mode { --glow-color: #a29bfe; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><polygon points="5,0 10,5 5,10 0,5" fill="rgba(255,255,255,0.5)"/></svg>'), radial-gradient(circle at 50% 50%, #a29bfe, #6c5ce7); }
+.gem.cyan.special-mode { --glow-color: #81ecec; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><polygon points="5,0 10,5 5,10 0,5" fill="rgba(255,255,255,0.5)"/></svg>'), radial-gradient(circle at 50% 50%, #81ecec, #00cec9); }
+.gem.pink.special-mode { --glow-color: #fab1a0; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><polygon points="5,0 10,5 5,10 0,5" fill="rgba(255,255,255,0.5)"/></svg>'), radial-gradient(circle at 50% 50%, #fab1a0, #e84393); }
+
+/* Next Box */
+.next-box {
+  display: flex;
+  gap: 10px;
+  background-color: var(--stone-light);
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 2px solid var(--stone-dark);
+}
+.next-gem {
+  width: 20px;
+  height: 20px;
+}
+
+/* Small Gem Preview on Board */
+.gem.small-gem {
+  width: 30%;
+  height: 30%;
+  box-shadow: 1px 1px 3px rgba(0,0,0,0.4), inset -2px -2px 5px rgba(0,0,0,0.5), inset 2px 2px 5px rgba(255,255,255,0.8);
+}
+
+/* Clearing Animation (Particle Flow) */
+.gem.clearing {
+  animation: particle-explosion 0.5s ease-out forwards;
+}
+
+@keyframes particle-explosion {
+  0% { transform: scale(1); opacity: 1; box-shadow: 0 0 10px rgba(255,255,255,0.8); }
+  50% { transform: scale(1.5); opacity: 0.8; box-shadow: 0 0 30px rgba(255,255,255,1), 20px -20px 10px var(--glow-color, rgba(255,255,255,0.8)), -20px 20px 10px var(--glow-color, rgba(255,255,255,0.8)), 20px 20px 10px var(--glow-color, rgba(255,255,255,0.8)), -20px -20px 10px var(--glow-color, rgba(255,255,255,0.8)); }
+  100% { transform: scale(0); opacity: 0; box-shadow: 0 0 0px transparent; }
+}
+
+/* Footer / controls */
+.controls-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: min(100%, calc(100vh - 180px));
+  margin-top: 10px;
+  flex-shrink: 0;
+}
+
+.btn-stone {
+  background-color: var(--stone-light);
+  border: 3px solid var(--stone-dark);
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+  cursor: pointer;
+}
+.btn-stone:active {
+  box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5);
+  transform: translateY(2px);
+}
