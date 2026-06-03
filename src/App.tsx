@@ -21,9 +21,20 @@ interface GameSnapshot {
   nextColors: Color[];
 }
 
+interface SaveData {
+  board: BoardState;
+  score: number;
+  nextColors: Color[];
+}
+
+const SAVE_KEY = 'magicGemSave';
+const HIGHSCORE_KEY = 'magicGemHighScore';
+
 const STEP_MS = 120; // ms per grid cell during travel animation
 
 const App = () => {
+  const [gameState, setGameState] = useState<'menu' | 'playing' | 'paused'>('menu');
+  const [hasSave, setHasSave] = useState<boolean>(false);
   const [board, setBoard] = useState<BoardState>(createEmptyBoard());
   const [score, setScore] = useState<number>(0);
   const [nextColors, setNextColors] = useState<Color[]>([]);
@@ -119,14 +130,63 @@ const App = () => {
     setIsProcessing(false);
     setMovingBall(null);
     setUndoSnapshot(null);
+    setGameState('playing');
   }, []);
 
-  useEffect(() => {
-    initGame();
+  const loadGame = useCallback(() => {
+    const savedGame = localStorage.getItem(SAVE_KEY);
+    if (savedGame) {
+      try {
+        const parsed: SaveData = JSON.parse(savedGame);
+        boardRef.current = parsed.board;
+        setBoard(parsed.board);
+        setScore(parsed.score);
+        setNextColors(parsed.nextColors);
+        setGameOver(false);
+        setIsProcessing(false);
+        setSelectedPoint(null);
+        setMovingBall(null);
+        setUndoSnapshot(null);
+        setGameState('playing');
+      } catch (e) {
+        console.error("Failed to load game", e);
+        initGame();
+      }
+    }
   }, [initGame]);
 
+  useEffect(() => {
+    const savedHighScore = localStorage.getItem(HIGHSCORE_KEY);
+    if (savedHighScore) {
+      setHighScore(parseInt(savedHighScore, 10));
+    }
+    const savedGame = localStorage.getItem(SAVE_KEY);
+    if (savedGame) {
+      setHasSave(true);
+    }
+  }, []);
+
+  const saveGame = useCallback(() => {
+    if (gameOver) return;
+    const save: SaveData = {
+      board: boardRef.current,
+      score,
+      nextColors
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+    localStorage.setItem(HIGHSCORE_KEY, highScore.toString());
+    setHasSave(true);
+  }, [score, nextColors, highScore, gameOver]);
+
+  // Auto save when score/nextColors/board changes and we are playing
+  useEffect(() => {
+    if (gameState === 'playing' && !isProcessing) {
+      saveGame();
+    }
+  }, [board, score, nextColors, isProcessing, gameState, saveGame]);
+
   const handleCellClick = (x: number, y: number) => {
-    if (gameOver || isProcessing) return;
+    if (gameState !== 'playing' || gameOver || isProcessing) return;
 
     const clickedColor = board[y][x].color;
 
@@ -247,6 +307,8 @@ const App = () => {
       boardRef.current = currentBoard;
       setBoard([...currentBoard]);
       setGameOver(true);
+      localStorage.removeItem(SAVE_KEY);
+      setHasSave(false);
       return;
     }
 
@@ -342,11 +404,14 @@ const App = () => {
 
           {/* Controls */}
           <div className="controls-panel">
-            <div className="btn-stone" onClick={initGame} title="New Game">
-               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5c4033" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l5.67-5.67"/></svg>
+            <div className="btn-pause" onClick={() => setGameState('paused')} title="Pause">
+              <div className="pause-icon">
+                <div className="pause-bar"></div>
+                <div className="pause-bar"></div>
+              </div>
             </div>
             {gameOver && (
-              <div className="stone-panel" style={{ color: '#8b0000' }}>GAME OVER</div>
+              <div className="stone-panel" style={{ color: '#8b0000', fontSize: '18px', padding: '10px' }}>GAME OVER</div>
             )}
             <div
               className={`btn-undo ${!undoSnapshot || isProcessing ? 'disabled' : ''}`}
@@ -361,6 +426,29 @@ const App = () => {
           </div>
         </div>
       </div>
+
+      {gameState === 'menu' && (
+        <div className="menu-overlay">
+          <div className="menu-title-board">
+            <div className="menu-title-text">Magic Gem</div>
+          </div>
+          <div className="menu-button" onClick={initGame}>PLAY</div>
+          <div className={`menu-button ${!hasSave ? 'disabled' : ''}`} onClick={hasSave ? loadGame : undefined}>CONTINUE GAME</div>
+          <div className="menu-button" onClick={() => alert(`High Score: ${highScore}`)}>High Score</div>
+          <div className="menu-button" onClick={() => alert("Options not implemented")}>OPTIONS</div>
+          <div className="menu-button" onClick={() => alert("About Magic Gem")}>ABOUT</div>
+        </div>
+      )}
+
+      {gameState === 'paused' && (
+        <div className="menu-overlay pause-overlay">
+          <div className="pause-board">
+            <div className="pause-title">PAUSE</div>
+            <div className="menu-button" onClick={() => setGameState('playing')}>RESUME</div>
+            <div className="menu-button" onClick={() => setGameState('menu')}>QUIT</div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
