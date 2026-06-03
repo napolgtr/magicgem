@@ -57,39 +57,49 @@ export const getRandomColors = (count: number): Color[] => {
   return result;
 };
 
-// BFS to find if there is a path from start to end
-export const hasPath = (board: BoardState, start: Point, end: Point): boolean => {
-  if (start.x === end.x && start.y === end.y) return false;
-  if (board[end.y][end.x].color !== null) return false;
+// BFS to find the shortest path from start to end (4 directions only, Lines 98 rules)
+// Returns an array of points [start, ..., end], or null if no path exists.
+export const findPath = (board: BoardState, start: Point, end: Point): Point[] | null => {
+  if (start.x === end.x && start.y === end.y) return null;
+  if (board[end.y][end.x].color !== null) return null;
+
+  const toKey = (p: Point) => `${p.x},${p.y}`;
+  // parent map: key -> parent Point (null means this is the start)
+  const parent = new Map<string, Point | null>();
+  parent.set(toKey(start), null);
 
   const queue: Point[] = [start];
-  const visited = new Set<string>();
-  visited.add(`${start.x},${start.y}`);
-
   const dirs = [
-    { dx: 0, dy: 1 }, { dx: 1, dy: 0 }, { dx: 0, dy: -1 }, { dx: -1, dy: 0 }
+    { dx: 0, dy: -1 }, { dx: 1, dy: 0 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }
   ];
 
-  while (queue.length > 0) {
+  let found = false;
+  outer: while (queue.length > 0) {
     const current = queue.shift()!;
-    if (current.x === end.x && current.y === end.y) {
-      return true;
-    }
-
     for (const dir of dirs) {
       const nx = current.x + dir.dx;
       const ny = current.y + dir.dy;
-
       if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE) {
-        if (board[ny][nx].color === null && !visited.has(`${nx},${ny}`)) {
-          visited.add(`${nx},${ny}`);
+        const nkey = toKey({ x: nx, y: ny });
+        if (!parent.has(nkey) && board[ny][nx].color === null) {
+          parent.set(nkey, current);
+          if (nx === end.x && ny === end.y) { found = true; break outer; }
           queue.push({ x: nx, y: ny });
         }
       }
     }
   }
 
-  return false;
+  if (!found) return null;
+
+  // Reconstruct path by walking back from end to start
+  const path: Point[] = [];
+  let curr: Point | null | undefined = end;
+  while (curr !== null && curr !== undefined) {
+    path.unshift(curr);
+    curr = parent.get(toKey(curr)); // undefined when key not in map, null at start
+  }
+  return path;
 };
 
 // Check for lines of 5 or more

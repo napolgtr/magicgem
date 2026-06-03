@@ -147,6 +147,7 @@ body {
   border-radius: 4px;
   box-shadow: 0 10px 20px rgba(0,0,0,0.5);
   gap: 1px;
+  position: relative; /* Required: anchors the traveling gem overlay */
 }
 
 .grid-cell {
@@ -187,7 +188,8 @@ body {
   border-radius: 50%;
   box-shadow: 2px 2px 5px rgba(0,0,0,0.6), inset -5px -5px 15px rgba(0,0,0,0.5), inset 5px 5px 15px rgba(255,255,255,0.8);
   z-index: 10;
-  transition: all 0.3s ease;
+  /* Only animate transform and box-shadow, NOT left/top (those are for traveling gem) */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
   overflow: hidden;
 }
@@ -222,14 +224,19 @@ body {
 }
 
 .gem.selected {
-  transform: scale(1.2);
-  box-shadow: 0 0 15px rgba(255,255,255,0.8), inset -5px -5px 15px rgba(0,0,0,0.5), inset 5px 5px 15px rgba(255,255,255,0.8);
-  animation: bounce 0.5s infinite alternate;
+  animation: gem-selected 0.5s infinite alternate;
+  z-index: 20;
 }
 
-@keyframes bounce {
-  0% { transform: translateY(0) scale(1.1); }
-  100% { transform: translateY(-5px) scale(1.1); }
+@keyframes gem-selected {
+  0% {
+    transform: translateY(0) scale(1.05);
+    box-shadow: 0 0 8px rgba(255,255,255,0.6), inset -5px -5px 15px rgba(0,0,0,0.5), inset 5px 5px 15px rgba(255,255,255,0.8);
+  }
+  100% {
+    transform: translateY(-6px) scale(1.15);
+    box-shadow: 0 0 24px rgba(255,255,255,1), 0 0 40px rgba(255,255,100,0.5), inset -5px -5px 15px rgba(0,0,0,0.5), inset 5px 5px 15px rgba(255,255,255,0.8);
+  }
 }
 
 /* Gem Colors - High contrast, vivid like Magic Gem reference */
@@ -334,15 +341,50 @@ body {
   background-color: var(--stone-light);
   border: 3px solid var(--stone-dark);
   border-radius: 50%;
-  width: 60px;
-  height: 60px;
+  width: 56px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
   cursor: pointer;
+  flex-shrink: 0;
 }
 .btn-stone:active {
   box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5);
   transform: translateY(2px);
+}
+
+/* Green Undo Button — like the reference image */
+.btn-undo {
+  background: radial-gradient(circle at 38% 32%, #88ee55, #22aa22);
+  border: 3px solid #116611;
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.5), 0 0 12px rgba(60,200,60,0.4), inset 0 2px 4px rgba(255,255,255,0.4);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.2s, transform 0.1s;
+}
+.btn-undo:active:not(.disabled) {
+  box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5);
+  transform: translateY(2px);
+}
+.btn-undo.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Traveling Ball Overlay (smooth movement animation) */
+.gem.traveling-gem {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 50;
+  /* No overflow:hidden on this one so shine pseudo-elements show fully */
 }
